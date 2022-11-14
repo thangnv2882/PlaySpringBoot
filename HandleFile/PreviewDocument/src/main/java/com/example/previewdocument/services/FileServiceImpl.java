@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 public class FileServiceImpl implements IFileService {
 
   @Override
-  public String previewDocument(File docx) throws IOException {
+  public String previewDocument(File docx, int page) throws IOException {
 
     ZipHandle zipHandle = new ZipHandle();
     File fileDocx = new File(docx.getName());
@@ -29,56 +29,88 @@ public class FileServiceImpl implements IFileService {
 
     JSONObject jsonObject = XML.toJSONObject(xml);
 //    String jsonString = jsonObject.toString(4);
+    JSONArray jsonArray = jsonObject.getJSONObject("w:document").getJSONObject("w:body").getJSONArray("w:p");
 
-    final JSONArray jsonArray = jsonObject.getJSONObject("w:document").getJSONObject("w:body").getJSONArray("w:p");
+    int count = 0;
 
-    int page = 0;
+    for (int i = 0; i < jsonArray.length(); i++) {
 
-    while (page <= 1) {
-      for(int i = 0; i < jsonArray.length(); i++) {
-        JSONObject jo2 = jsonArray.getJSONObject(i);
-        if(jo2.has("w:r")) {
-          try {
-            if(jo2.getJSONObject("w:r") != null) {
-              JSONObject jo3 = jsonArray.getJSONObject(i).getJSONObject("w:r");
-              if(jo3.has("w:lastRenderedPageBreak")) {
-                System.out.println("cong o obj");
-                page++;
-//                if(page > 1) {
-                  System.out.println("xoa 1 thang");
-                    jsonArray.remove(i);
-//                }
+      JSONObject jsonObjectP = jsonArray.getJSONObject(i);
+      if (jsonObjectP.has("w:r")) {
+        try {
+          JSONObject jsonObjectR = jsonArray.getJSONObject(i).getJSONObject("w:r");
+          if (jsonObjectR.has("w:lastRenderedPageBreak")) {
+            count++;
+            if (count >= page) {
+              for(int k = i; k < jsonArray.length(); k++) {
+                // code here
+                jsonArray.remove(k);
               }
             }
-          } catch (Exception ex) {
-//          System.out.println(ex.getMessage());
           }
-          try {
-            if(jo2.getJSONArray("w:r") != null) {
-              JSONArray jo3 = jsonArray.getJSONObject(i).getJSONArray("w:r");
-              for(int j = 0; j < jo3.length(); j++) {
-//              System.out.println("json object cua arr: " + jo3.getJSONObject(j));
-                if(jo3.getJSONObject(j).has("w:lastRenderedPageBreak")) {
-                  System.out.println("cong o arr");
-                  page++;
+        } catch (Exception ex) {
+          System.out.println(ex.getMessage());
+        }
+        try {
+          JSONArray jsonArrayR = jsonArray.getJSONObject(i).getJSONArray("w:r");
+          for (int j = 0; j < jsonArrayR.length(); j++) {
+            if (jsonArrayR.getJSONObject(j).has("w:lastRenderedPageBreak")) {
+              count++;
+              if (count >= page) {
+                for (int k = j; k < jsonArrayR.length(); k++) {
+                  jsonArray.getJSONObject(i).getJSONArray("w:r").remove(k);
                 }
               }
             }
-          } catch (Exception ex) {
-//          System.out.println(ex.getMessage());
           }
+        } catch (Exception ex) {
+          System.out.println(ex.getMessage());
         }
       }
     }
 
-
-    System.out.println(page);
-
     jsonObject.getJSONObject("w:document").getJSONObject("w:body").put("w:p", jsonArray);
 
     String xmlResult = XML.toString(jsonObject);
-    System.out.println(xmlResult);
+//    System.out.println("xml: " + xmlResult);
 
+//    System.out.println(xmlResult);
+
+//    WordprocessingMLPackage wordMLPackage = new WordprocessingMLPackage();
+//    MainDocumentPart documentPart = wordMLPackage.getMainDocumentPart();
+//
+////    String xmlContent= documentPart.getXML();
+//
+//    Object obj = XmlUtils.unmarshalString(xmlResult);
+//    documentPart.setJaxbElement((Document) obj);
+//    wordMLPackage.addTargetPart(documentPart);
+//    wordMLPackage.save(new File("Preview.docx"));
+
+//    Path pathXMLFile = Paths.get("Previeww.xml");
+//    Files.write(pathXMLFile, xmlResult.getBytes(), StandardOpenOption.WRITE, StandardOpenOption.APPEND,
+//        StandardOpenOption.CREATE);
+
+    //Create a Document instance
+//    Document document = new Document("Previeww.xml");
+//
+//    //Load an XML sample document
+//    document.loadFromFile(xmlResult);
+//
+//    //Save the document to Word
+//    document.saveToFile("Previeww.docx", FileFormat.Docx);
+//    final String xmlStr = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"+
+//        "<Emp id=\"1\"><name>Pankaj</name><age>25</age>\n"+
+//        "<role>Developer</role><gen>Male</gen></Emp>";
+//    DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+//    DocumentBuilder builder;
+//    try
+//    {
+//      builder = factory.newDocumentBuilder();
+//      Document doc = builder.parse( new InputSource( new StringReader( xmlStr ) ) );
+//      System.out.println("doc: " + doc.getDocumentElement());
+//    } catch (Exception e) {
+//      e.printStackTrace();
+//    }
 
     return jsonObject.toString();
   }
